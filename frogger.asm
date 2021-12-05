@@ -9,6 +9,8 @@
 #
 .data
 	displayAddress: .word 0x10008000
+	frog_x_start: .word 0x000E
+	frog_y_start: .word 0x001C
 	frog_x: .word 0x000E
 	frog_y: .word 0x001C
 	
@@ -32,6 +34,8 @@
 	water_color: .word 0x436EEE
 	log_color: .word 0xcd8500
 	
+	#--------------- Collison bit --------------------#
+	no_collision: .word 0x000001
 .text
 
 #################################################################################################################
@@ -339,7 +343,7 @@ check_update_second_log_row:
 	addi $t0, $t0, 1
 	sw $t0, second_log_row_movement_counter
 	
-	j draw_frog
+	j detect_collision
 	
 	#--------------------------- update first vehicle row (--->) ---------------------------
 update_first_vehicle_row:
@@ -407,6 +411,50 @@ update_second_log_row:
 	j check_update_rows
 
 update_rows_memory_end:
+
+	
+################################################################################################################
+#---------------------------------------------detect-collision--------------------------------------------------------#
+detect_collision:
+	lw    $a1, vehicle_color
+	lw    $a2, water_color
+	
+	lw    $t0, displayAddress # $t0 stores the base address for display
+	lw    $t2, frog_x	  # $t2 stores x value of frog in 32*32 table
+	lw    $t3, frog_y	  # $t3 stores y value of frog in 32*32 table
+	
+	sll   $t4, $t3, 5  	 
+	# left-top-corner
+	add   $t4, $t4, $t2       # t4 = frog_y * 32 + 14 (current address in 32*32)
+	sll   $t5, $t4, 2         # t5 is the offset in mips = 4 * t4
+	add   $t6, $t5, $t0  	  # t6 is the address in mips
+	lw    $t1, 0($t6)
+	add   $a0, $t1, $zero        	# set-up color left-corner-pos of frog
+	jal   reset_collision_detection
+	
+	# right-top-corner
+	addi  $t7, $t4, 3
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0 
+	lw    $t1, 0($t6)
+	add   $a0, $t1, $zero          # set-up color
+	jal   reset_collision_detection
+		  
+	# left-down-corner
+	addi  $t7, $t4, 96  
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0
+	lw    $t1, 0($t6)
+	add   $a0, $t1, $zero          # set-up color
+	jal   reset_collision_detection
+		  
+	# right-down-corner
+	addi  $t7, $t4, 99   
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0 
+	lw    $t1, 0($t6)
+	add   $a0, $t1, $zero       # set-up color
+	jal   reset_collision_detection
 	
 ################################################################################################################
 #---------------------------------------------draw frog--------------------------------------------------------#
@@ -426,7 +474,8 @@ draw_frog:
 	add   $t4, $t4, $t2       # t4 = frog_y * 32 + 14 (current address in 32*32)
 	sll   $t5, $t4, 2         # t5 is the offset in mips = 4 * t4
 	add   $t6, $t5, $t0  	  # t6 is the address in mips
-	sw    $t1, 0($t6) 	
+	sw    $t1, 0($t6) 	  
+	
 	# right-top coner
 	addi  $t7, $t4, 3
 	sll   $t5, $t7, 2 
@@ -478,7 +527,23 @@ draw_frog:
 	add   $t6, $t5, $t0  	  
 	sw    $t1, 0($t6) 
 
+################################################################################################################
+#------------------------------deal-with-collision (restart game)----------------------------------------------#
+deal_with_collision:
+	lw  $t1, no_collision
+	add $t2, $zero, $zero
+	bne $t1, $t2 deal_with_collision_end   # jump over the body to the end if no collision
 	
+	
+	lw $t3, frog_x_start
+	lw $t4, frog_y_start
+	sw $t3, frog_x
+	sw $t4, frog_y
+	
+	# set back to no collison
+	addi $t5, $zero, 1
+	sw $t5, no_collision
+deal_with_collision_end:	
 ################################## sleep ##################################
 
 sleep:	li $v0, 32
@@ -616,3 +681,16 @@ move_a_row_left_end:
  	addi $t0, $t0, 124  
  	sw $t2, 0($t0) 		# A[31] store a color pixel t2
  	jr $ra
+
+#-----------------------------------------reset_collision_detection----------------------------------------------
+# function: reset_collision_detection 
+# arguments：$a0 = color of checking point
+# 	     $a1 = color of vehicle
+#   	     $a2 = color of log
+reset_collision_detection:
+	beq   $a0, $a1, reset_collision_detection_body
+	bne   $a0, $a2, reset_collision_detection_end
+reset_collision_detection_body:
+	sw    $zero, no_collision   # if collisison happends, store false (0) to no_collision
+reset_collision_detection_end:
+	jr    $ra
