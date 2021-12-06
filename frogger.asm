@@ -45,6 +45,7 @@
 	
 	#----------------Score Variable -------------------#
 	score: .word 0x000000
+	space: .byte ' '
 .text
 
 #################################################################################################################
@@ -56,6 +57,10 @@ START:
 	li $v0, 1
 	lw $a0, score
 	syscall
+	
+	li $v0, 4
+	la $a0, space
+	syscall 
 	
 fill_first_vehicle_row:
 	lw   $t0, displayAddress # $t0 stores the base address for display
@@ -234,6 +239,13 @@ keystroke_detection:
 	lw $t8, 0xffff0000
 	bne $t8, 1, draw_3_areas
 	
+	# sound effect
+	li $v0, 33
+	li $a0, 70
+	li $a1, 20
+	li $a2, 1
+	li $a3, 127
+	syscall 
 	
 	lw $t2, 0xffff0004
 	beq $t2, 0x61, respond_to_A
@@ -546,7 +558,7 @@ deal_with_collision:
 	li $a0, 40
 	li $a1, 300
 	li $a2, 1
-	li $a3, 100
+	li $a3, 127
 	syscall 
 	
 	jal reset_frog
@@ -583,10 +595,38 @@ draw_goal_region:
 	
 	# sound effect
 	li $v0, 33
-	li $a0, 80
-	li $a1, 300
+	li $a0, 40
+	li $a1, 400
 	li $a2, 60
-	li $a3, 100
+	li $a3, 127
+	syscall 
+	
+	li $v0, 33
+	li $a0, 50
+	li $a1, 400
+	li $a2, 60
+	li $a3, 127
+	syscall 
+	
+	li $v0, 33
+	li $a0, 60
+	li $a1, 400
+	li $a2, 1
+	li $a3, 127
+	syscall 
+	
+	li $v0, 33
+	li $a0, 70
+	li $a1, 400
+	li $a2, 1
+	li $a3, 127
+	syscall 
+	
+	li $v0, 33
+	li $a0, 80
+	li $a1, 400
+	li $a2, 1
+	li $a3, 127
 	syscall 
 	
 	# add 100 to score, and print out the score
@@ -597,6 +637,10 @@ draw_goal_region:
 	li $v0, 1
 	lw $a0, score
 	syscall
+	
+	li $v0, 4
+	la $a0, space
+	syscall 
 	
 	li $v0, 32       # sleep for a second
 	li $a0, 1000
@@ -623,10 +667,28 @@ sleep:	li $v0, 32
 detect_retry:
 	# sound effect
 	li $v0, 33
-	li $a0, 60
-	li $a1, 1500
+	li $a0, 70
+	li $a1, 400
 	li $a2, 1
-	li $a3, 100
+	li $a3, 127
+	syscall 
+	li $v0, 33
+	li $a0, 60
+	li $a1, 400
+	li $a2, 1
+	li $a3, 127
+	syscall 
+	li $v0, 33
+	li $a0, 50
+	li $a1, 400
+	li $a2, 1
+	li $a3, 127
+	syscall 
+	li $v0, 33
+	li $a0, 40
+	li $a1, 400
+	li $a2, 1
+	li $a3, 127
 	syscall 
 	
 re_detect:
