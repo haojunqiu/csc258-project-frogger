@@ -9,15 +9,21 @@
 #
 .data
 	displayAddress: .word 0x10008000
+	#--------------- frog --------------------#
 	frog_x_start: .word 0x000E
 	frog_y_start: .word 0x001C
 	frog_x: .word 0x000E
 	frog_y: .word 0x001C
+	normal_frog_color: .word 0x8b8970
+	dead_frog_color: .word 0xe066ff 
+	
 	
 	first_vehicle_row: .space 512
 	second_vehicle_row: .space 512
 	first_log_row: .space 512
 	second_log_row: .space 512
+	
+	lives: .word 0x0003
 	#-------------- Different Speed Feature ------------#	
 	first_vehicle_row_movement_counter: .word 0x0000
 	second_vehicle_row_movement_counter: .word 0x0000
@@ -36,11 +42,21 @@
 	
 	#--------------- Collison bit --------------------#
 	no_collision: .word 0x000001
+	
+	#----------------Score Variable -------------------#
+	score: .word 0x000000
 .text
 
 #################################################################################################################
 #----------------------------------------store first vehical row memory-----------------------------------------#
-
+START:	
+	li $t0, 0
+	sw $t0, score
+	
+	li $v0, 1
+	lw $a0, score
+	syscall
+	
 fill_first_vehicle_row:
 	lw   $t0, displayAddress # $t0 stores the base address for display
 	lw   $t1, vehicle_color # $t1 stores the red colour code
@@ -214,6 +230,7 @@ fill_second_log_row_end:
 ####################################################################################################
 MAINLOOP:	
 ######################################## KeyStroke Detection #######################################
+keystroke_detection:
 	lw $t8, 0xffff0000
 	bne $t8, 1, draw_3_areas
 	
@@ -223,7 +240,9 @@ MAINLOOP:
 	beq $t2, 0x77, respond_to_W 
 	beq $t2, 0x73, respond_to_S 
 	beq $t2, 0x64, respond_to_D 
-
+	
+	j draw_3_areas
+	
 respond_to_A:
 	lw $t3, frog_x
 	addi $t3, $t3, -1
@@ -255,6 +274,7 @@ respond_to_D:
 	
 	add $t3, $zero, $zero
 	j draw_3_areas
+	
 
 ########################################## draw 3 safe areas #######################################
 	
@@ -271,7 +291,7 @@ draw_3_areas:
 	
 	addi $a0, $zero, 512
 	addi $a1, $zero, 128 
-	li $a2, 0xeec900 	# $a2 stores the green colour code    
+	li $a2, 0xeec900 	# $a2 stores the yellow colour code    
 	jal  draw_rect
 	
 	addi $a0, $zero, 896
@@ -279,6 +299,37 @@ draw_3_areas:
 	li $a2, 0x00ff00 	# $a2 stores the green colour code   
 	jal  draw_rect
 	
+	
+########################################## draw lives ########################################
+
+draw_lives:
+	lw    $t0, displayAddress # $t0 stores the base address for display
+	
+	lw $t1, lives
+	li $t2, 0x0001
+	li $t3, 0x0002
+	
+	beq $t1, $t2, draw_one_live     # if $t1 = 1
+	beq $t1, $t3, draw_two_lives    # if $t1 = 2
+	
+	addi $a0, $zero, 37
+	addi $a1, $zero, 1
+	li   $a2, 0xff4500
+	jal draw_rect
+	
+draw_two_lives:
+	addi $a0, $zero, 35
+	addi $a1, $zero, 1
+	li   $a2, 0xff4500
+	jal draw_rect
+	
+draw_one_live:	
+	addi $a0, $zero, 33
+	addi $a1, $zero, 1
+	li   $a2, 0xff4500
+	jal draw_rect
+
+
 ################################################################################################################
 #------------------------------------------------draw rows-----------------------------------------------------#
 
@@ -414,7 +465,7 @@ update_rows_memory_end:
 
 	
 ################################################################################################################
-#---------------------------------------------detect-collision--------------------------------------------------------#
+#---------------------------------------------detect-collision-------------------------------------------------#
 detect_collision:
 	lw    $a1, vehicle_color
 	lw    $a2, water_color
@@ -453,108 +504,153 @@ detect_collision:
 	sll   $t5, $t7, 2 
 	add   $t6, $t5, $t0 
 	lw    $t1, 0($t6)
-	add   $a0, $t1, $zero       # set-up color
+	add   $a0, $t1, $zero           # set-up color
 	jal   reset_collision_detection
 	
 ################################################################################################################
 #---------------------------------------------draw frog--------------------------------------------------------#
+	# go to normal draw if no collsion is true, i.e.m = 1
+	lw $t1, no_collision
+	addi $t2, $zero, 1
+	beq $t1, $t2, normal_frog_draw
+	
+reset_frog_draw:
+	lw $a1, dead_frog_color
+	jal draw_frog
+	
+	li $v0, 32
+	li $a0, 1000
+	syscall
+	
+	j frog_end
+	
+normal_frog_draw:
+	lw $a1, normal_frog_color
+	jal draw_frog
+	
 
-draw_frog:
-	lw    $t0, displayAddress # $t0 stores the base address for display
-	li    $t1, 0xe066ff       # $t1 stores purple color
-	lw    $t2, frog_x	  # $t2 stores x value of frog in 32*32 table
-	lw    $t3, frog_y	  # $t3 stores y value of frog in 32*32 table
-	
-	# t4 = address of left-top corner of frog in 32*32
-	# t5 = offset (4 * current address in 32*32)
-	# t6 = address in mips = t5 + t0 
-		
-	# left-top coner
-	sll   $t4, $t3, 5   
-	add   $t4, $t4, $t2       # t4 = frog_y * 32 + 14 (current address in 32*32)
-	sll   $t5, $t4, 2         # t5 is the offset in mips = 4 * t4
-	add   $t6, $t5, $t0  	  # t6 is the address in mips
-	sw    $t1, 0($t6) 	  
-	
-	# right-top coner
-	addi  $t7, $t4, 3
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 	
-	# second row of frog
-	addi  $t7, $t4, 32
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 	
-	addi  $t7, $t4, 33
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 	
-	addi  $t7, $t4, 34
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 
-	addi  $t7, $t4, 35
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 	
-	# third row of frog
-	addi  $t7, $t4, 65
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6)	
-	addi  $t7, $t4, 66
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6)
-	# forth row of frog  
-	addi  $t7, $t4, 96   # left-down-corner
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 
-	
-	addi  $t7, $t4, 97
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 
-	addi  $t7, $t4, 98
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6)   
-	   	
-	addi  $t7, $t4, 99   # right-down-corner
-	sll   $t5, $t7, 2 
-	add   $t6, $t5, $t0  	  
-	sw    $t1, 0($t6) 
+frog_end:
+
+
+
 
 ################################################################################################################
-#------------------------------deal-with-collision (restart game)----------------------------------------------#
+#-------------------------deal-with-collision (restart game) and decrement a live---------------------------------------#
 deal_with_collision:
 	lw  $t1, no_collision
 	add $t2, $zero, $zero
 	bne $t1, $t2 deal_with_collision_end   # jump over the body to the end if no collision
 	
+	# sound effect
+	li $v0, 33
+	li $a0, 40
+	li $a1, 300
+	li $a2, 1
+	li $a3, 100
+	syscall 
 	
-	lw $t3, frog_x_start
-	lw $t4, frog_y_start
-	sw $t3, frog_x
-	sw $t4, frog_y
+	jal reset_frog
+	
+decrement_live:
+	lw $t3, lives
+	addi $t3, $t3, -1
+	sw $t3, lives
 	
 	# set back to no collison
 	addi $t5, $zero, 1
 	sw $t5, no_collision
+	
+	beq $t3, $zero, detect_retry
 deal_with_collision_end:	
+
+
+################################################################################################################
+#---------------------------------------draw goal region (and reset frog)--------------------------------------------#
+	lw $t1, frog_y
+	addi $t2, $zero, 4
+	bne $t1, $t2, draw_goal_region_end
+	
+draw_goal_region:
+	li $v0, 32       # sleep for a second
+	li $a0, 500
+	syscall
+	
+	lw $t0, displayAddress 	# $t0 stores the base address for display
+	addi $a0, $zero, 0
+	addi $a1, $zero, 256
+	li $a2, 0xffa500 	# $a2 stores the yellow colour code    
+	jal  draw_rect
+	
+	# sound effect
+	li $v0, 33
+	li $a0, 80
+	li $a1, 300
+	li $a2, 60
+	li $a3, 100
+	syscall 
+	
+	# add 100 to score, and print out the score
+	lw $s1, score
+	addi $s1, $s1, 100
+	sw $s1, score
+	
+	li $v0, 1
+	lw $a0, score
+	syscall
+	
+	li $v0, 32       # sleep for a second
+	li $a0, 1000
+	syscall
+	
+	jal reset_frog
+	
+	
+	
+draw_goal_region_end:
+
 ################################## sleep ##################################
 
 sleep:	li $v0, 32
 	li $a0, 16
 	syscall
 	j MAINLOOP
-	
+		
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
 
+################################## detect-retry ##################################
+detect_retry:
+	# sound effect
+	li $v0, 33
+	li $a0, 60
+	li $a1, 1500
+	li $a2, 1
+	li $a3, 100
+	syscall 
+	
+re_detect:
+	lw $t0, displayAddress 	# $t0 stores the base address for display
+	
+	addi $a0, $zero, 0 
+	addi $a1, $zero, 1024
+	li $a2, 0x828282	# $a2 stores the bloody red colour code   
+	jal  draw_rect
+	
+	# keystroke_detection
+	lw $t8, 0xffff0000
+	bne $t8, 1, re_detect
+	
+	
+	lw $t2, 0xffff0004
+	beq $t2, 0x72, respond_to_r
+	j re_detect
+	
+respond_to_r:
+	addi $t3, $zero, 3
+	sw $t3, lives
+	j START
+	
 
 
 ##################################################################################################
@@ -694,3 +790,84 @@ reset_collision_detection_body:
 	sw    $zero, no_collision   # if collisison happends, store false (0) to no_collision
 reset_collision_detection_end:
 	jr    $ra
+	
+#-----------------------------------------draw_frog ----------------------------------------------
+# function: draw_frog 
+# arguments：$a0 = color of frog
+draw_frog:
+	lw    $t0, displayAddress # $t0 stores the base address for display
+	lw    $t2, frog_x	  # $t2 stores x value of frog in 32*32 table
+	lw    $t3, frog_y	  # $t3 stores y value of frog in 32*32 table
+	
+	# t4 = address of left-top corner of frog in 32*32
+	# t5 = offset (4 * current address in 32*32)
+	# t6 = address in mips = t5 + t0 
+		
+	# left-top coner
+	sll   $t4, $t3, 5   
+	add   $t4, $t4, $t2       # t4 = frog_y * 32 + 14 (current address in 32*32)
+	sll   $t5, $t4, 2         # t5 is the offset in mips = 4 * t4
+	add   $t6, $t5, $t0  	  # t6 is the address in mips
+	sw    $a1, 0($t6) 	  
+	
+	# right-top coner
+	addi  $t7, $t4, 3
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 	
+	# second row of frog
+	addi  $t7, $t4, 32
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 	
+	addi  $t7, $t4, 33
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 	
+	addi  $t7, $t4, 34
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 
+	addi  $t7, $t4, 35
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 	
+	# third row of frog
+	addi  $t7, $t4, 65
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6)	
+	addi  $t7, $t4, 66
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6)
+	# forth row of frog  
+	addi  $t7, $t4, 96   # left-down-corner
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 
+	
+	addi  $t7, $t4, 97
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 
+	addi  $t7, $t4, 98
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6)   
+	   	
+	addi  $t7, $t4, 99   # right-down-corner
+	sll   $t5, $t7, 2 
+	add   $t6, $t5, $t0  	  
+	sw    $a1, 0($t6) 
+	
+	jr $ra
+
+#----------------------------------------reset_frog----------------------------------------#
+# fucntion: reset_frog
+reset_frog:
+	lw $t3, frog_x_start
+	lw $t4, frog_y_start
+	sw $t3, frog_x
+	sw $t4, frog_y
+	jr $ra
