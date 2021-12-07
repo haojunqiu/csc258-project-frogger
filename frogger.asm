@@ -1,4 +1,9 @@
-# Demo for painting
+#####################################################################
+#
+# CSC258H5S Fall 2021 Assembly Final Project
+# University of Toronto, St. George
+#
+# Student: Haojun Qiu, 1006900622
 #
 # Bitmap Display Configuration:
 # - Unit width in pixels: 8
@@ -7,6 +12,24 @@
 # - Display height in pixels: 256
 # - Base Address for Display: 0x10008000 ($gp)
 #
+# Which milestone is reached in this submission?
+# (See the assignment handout for descriptions of the milestones)
+# - Milestone 5 
+#
+# Which approved additional features have been implemented?
+# (See the assignment handout for the list of additional features)
+# 1. Display the number of lives remaining.
+# 2. After final player death, display game over/retry screen. Restart the game if the “retry” option is chosen.
+# 3. Dynamic increase in difficulty (speed, obstacles, etc.) as game progresses
+# 4. Have objects in different rows move at different speeds.
+# 5. Display a death/respawn animation each time the player loses a frog.
+# Two hard features: 
+# 6. Add sound effects for movement, collisions, game end and reaching the goal area.
+# 7. Display the player’s score at the top of the screen.
+# Any additional information that the TA needs to know:
+# - For the 7th feature implemented, I actually put the score of player in the Mars dialog rather than the screen
+#
+#####################################################################
 .data
 	displayAddress: .word 0x10008000
 	#--------------- frog --------------------#
