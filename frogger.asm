@@ -30,6 +30,27 @@
 # - For the 7th feature implemented, I actually put the score of player in the Mars dialog rather than the screen
 #
 #####################################################################
+
+# General Tips
+# 1. Use memory for your variables. The few registers aren't going to be enough for
+# allocating all the different variables that you'll need for keeping track of the state of
+# the game. Use the ".data" section (static data) of your code to declare as many
+# variables as you need.
+# 2. Create reusable functions. Instead of copy-and-pasting, write a function. Design
+# the interface of your function (input arguments and return values) so that the
+# function can be reused in a simple way.
+# 3. Create meaningful labels. Meaningful labels for variables, functions and branch
+# targets will make your code much easier to debug.
+# 4. Write comments. Without proper comments, assembly programs tend to become
+# incomprehensible quickly even for the authour of the program. It would be in your
+# best interest to keep track of stack pointers and registers relevant to different
+# components of your game.
+# 5. Start small. Don’t try to implement your whole game at once. Assembly programs
+# are notoriously hard to debug, so add each feature one at a time and always save
+# the previous working version before adding the next feature.
+# 6. Play the game. Use the playable link from the first page to help you make
+# decisions like when to move the logs and vehicles, how fast the frog should jump,
+# etc.
 .data
 	displayAddress: .word 0x10008000
 	#--------------- frog --------------------#
@@ -56,7 +77,7 @@
 	seventy_five: .word 0x4B
 	sixty: .word 0x3C
 	forty_five: .word 0x2D
-	thirty: .word 0x1E
+	thirty: .word 0x05
 	
 	#--------------- Color Constant --------------------#
 	vehicle_color: .word 0xff0000
