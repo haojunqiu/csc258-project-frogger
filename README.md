@@ -21,7 +21,7 @@ The .asm file should be run on MARS (e.g., MARS 4.5).
     - press `r` to restart the game if all lives are used
 
 ## Rules for the game:
-1. The wining goal is to move from to the top most green region. 
+1. The wining goal is to move the frog to the top most green region. 
 2. Every time the frog is moved to the top most green region, 100 points are earned for this game, and the newwest total is shown/updated on the MARS dialog.
 3. The row that have red and black blocks moving represent cars (red) and road (black) on a row, and each time the frog is being hitted by the car, 1 live will be lost.
 4. Similar to 3, the row that have blue and brown blocks moving represent lake (blue) and log (brown) on a row, and each time the frog falls into the lake (hit on blue region), 1 live will be lost.
