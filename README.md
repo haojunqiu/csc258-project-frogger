@@ -5,7 +5,7 @@ The .asm file should be run on MARS (e.g., MARS 4.5).
 ## Intruction for starting the game (for MARS): 
 1. Run the file
 2. Click on `Tools` -> `Bitmap Display` -> `Connect to MIPS` on the bottom left
-3. Then, have following the configuration for bitmap display:
+3. Then, have the following configuration for bitmap display:
     - Unit width in pixels: 8
     - Unit height in pixels: 8
     - Display width in pixels: 256
